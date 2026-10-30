@@ -10,7 +10,7 @@ Q15 / Q31 primitives, a biquad cascade with error-feedback noise shaping, a mirr
 
 ## Why this exists
 
-Low-cutoff IIR filters are where fixed point hurts. A 10 Hz low-pass at 48 kHz has its poles within 0.13 % of *z* = 1. Every rounding error inside the loop is amplified by roughly 1 / (1 + a1 + a2), which here is about 10⁷. The result is a filter that is "Q31" on paper and closer to 16 bits in practice. Fed a DC input, it also settles thousands of LSBs away from the right answer (a dead band).
+Low-cutoff IIR filters are where fixed point hurts. A 10 Hz low-pass at 48 kHz has its poles within 0.09 % of *z* = 1. At low frequencies every rounding error inside the loop is amplified by 1 / (1 + a1 + a2), which here is about 6 × 10⁵ (115 dB). The result is a filter that is "Q31" on paper and closer to 16 bits in practice. Fed a DC input, it also settles thousands of LSBs away from the right answer (a dead band).
 
 First-order **error feedback** carries each section's truncation error into the next sample. That puts a zero in the noise transfer function at DC, exactly where those poles amplify it. It costs one 64-bit add per sample.
 
@@ -35,7 +35,7 @@ DC accuracy of a 50 Hz low-pass with a constant input (`tests/test_filters.c`):
 | Rounded | −11 510 LSB (dead band) |
 | Error feedback | 0.13 LSB |
 
-**What error feedback does *not* fix: coefficient quantisation.** Measured against the ideal double-precision coefficients, the 10 Hz filter only reaches 75 dB, because its b-coefficients are around 10⁻⁷ and lose most of their bits in Q31. For cutoffs below ~fs/1000, decimate first or use a coupled-form / state-variable structure. The example prints this column too.
+**What error feedback does *not* fix: coefficient quantisation.** Measured against the ideal double-precision coefficients, the 10 Hz filter only reaches 75 dB, because its b-coefficients are around 4 × 10⁻⁷ and keep only about nine significant bits in Q31. For cutoffs below ~fs/1000, decimate first or use a coupled-form / state-variable structure. The example prints this column too.
 
 ## Usage
 
