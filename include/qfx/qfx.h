@@ -74,7 +74,7 @@ static inline q31_t q31_sub(q31_t a, q31_t b) { return qfx_sat32((int64_t)a - b)
 static inline q15_t q15_mul(q15_t a, q15_t b)
 {
     int32_t p = (int32_t)a * b;           /* Q30 */
-    return qfx_sat16((p + (1L << 14)) >> 15);
+    return qfx_sat16((p + ((int32_t)1 << 14)) >> 15);
 }
 
 static inline q31_t q31_mul(q31_t a, q31_t b)
