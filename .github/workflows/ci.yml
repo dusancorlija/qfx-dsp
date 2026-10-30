@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  host:
+    name: host / ${{ matrix.cc }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with sanitizers
+        env:
+          CC: ${{ matrix.cc }}
+        run: |
+          cmake -S . -B build -DQFX_WERROR=ON -DCMAKE_BUILD_TYPE=Debug \
+                -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all"
+          cmake --build build -j
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  cortex-m:
+    name: cortex-m / code size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install arm-none-eabi-gcc
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi
+      - name: Compile for Cortex-M0+, M4F and M7
+        run: |
+          set -e
+          echo "### Code size (\`-Os\`, bytes of .text)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Object | cortex-m0plus | cortex-m4 | cortex-m7 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
+          for f in biquad fir cic; do
+            row="| $f.c"
+            for cpu in "cortex-m0plus -mfloat-abi=soft" "cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard" "cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard"; do
+              arm-none-eabi-gcc -mcpu=$cpu -mthumb -Os -std=c99 -Wall -Wextra -Werror \
+                -ffunction-sections -Iinclude -c src/$f.c -o $f.o
+              size=$(arm-none-eabi-size -A $f.o | awk '/^\.text/ {s += $2} END {print s}')
+              row="$row | $size"
+            done
+            echo "$row |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          cat "$GITHUB_STEP_SUMMARY"

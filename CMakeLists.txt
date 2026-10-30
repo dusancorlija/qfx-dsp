@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 3.16)
+project(qfx-dsp C)
+
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(QFX_BUILD_TESTS "Build tests and examples (host only)" ON)
+option(QFX_WERROR "Treat warnings as errors" OFF)
+
+add_library(qfx src/biquad.c src/fir.c src/cic.c src/design.c)
+target_include_directories(qfx PUBLIC include)
+target_compile_options(qfx PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+if(QFX_WERROR)
+  target_compile_options(qfx PRIVATE -Werror)
+endif()
+find_library(MATH_LIB m)
+if(MATH_LIB)
+  target_link_libraries(qfx PUBLIC ${MATH_LIB})
+endif()
+
+if(QFX_BUILD_TESTS)
+  enable_testing()
+  foreach(t test_qfx test_filters)
+    add_executable(${t} tests/${t}.c)
+    target_link_libraries(${t} qfx)
+    add_test(NAME ${t} COMMAND ${t})
+  endforeach()
+
+  add_executable(bench examples/bench.c)
+  target_link_libraries(bench qfx)
+
+  add_executable(noise_shaping examples/noise_shaping.c)
+  target_link_libraries(noise_shaping qfx)
+endif()
